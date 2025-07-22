@@ -7,9 +7,9 @@
 #include "mifare_read_task.h"
 
 typedef enum {
-    RFID_STATE_IDLE,
-    RFID_STATE_DETECTED,
-    RFID_STATE_DONE
+    RFID_STATE_IDLE, // menunggu kartu
+    RFID_STATE_DETECTED, // kartu terdeteksi
+    RFID_STATE_DONE // pembacaan selesai
 } rfid_state_t;
 
 #define TAG "rfid_task"
@@ -17,7 +17,6 @@ typedef enum {
 
 void mifare_read_task(void *pvParameters){
     rfid_state_t state = RFID_STATE_IDLE;
-    bool card_present = false;
     
     uint8_t uid[4];
     uint8_t atqa[2];
@@ -27,27 +26,29 @@ void mifare_read_task(void *pvParameters){
 
     while (1){
         switch (state){
+            // state menunggu kartu
             case RFID_STATE_IDLE:
-                if (rc522_request(atqa)){
-                    if (!card_present){
-                        card_present = true;
-                        ESP_LOGI(TAG, "Kartu Terdeteksi!");
-                        state = RFID_STATE_DETECTED;
-                    }                     
+                if (rc522_request(atqa)){     
+                    ESP_LOGI(TAG, "Kartu Terdeteksi!");
+                    state = RFID_STATE_DETECTED;
+                                         
                 }
                 vTaskDelay(pdMS_TO_TICKS(200));
                 break;
         
+            // state pembacaan
             case RFID_STATE_DETECTED:
                 if (rc522_anticoll(uid)){
-                    ESP_LOGI(TAG, "UID: %02X %02X %02X %02X", uid[0], uid[1], uid[2], uid[3]);
+                    ESP_LOGI(TAG, "UID: %02X %02X %02X %02X", 
+                            uid[0], uid[1], uid[2], uid[3]);
                     if (rc522_select(uid) == Status_OK){
                         if (brute_force_key_finder(uid, found_key)){
-                            ESP_LOGI(TAG, "Brute force key found: %02X %02X %02X %02X %02X %02X", found_key[0], found_key[1], found_key[2],
-                            found_key[3], found_key[4], found_key[5]);
+                            ESP_LOGI(TAG, "Brute force key found: %02X %02X %02X %02X %02X %02X", 
+                                    found_key[0], found_key[1], found_key[2],
+                                    found_key[3], found_key[4], found_key[5]);
                             ESP_LOGI(TAG, "Attempting auth for block %d with found key...", block_to_read);
-                            rc522_select(uid);
-
+                            rc522_select(uid); // reselect kartu
+                            // proses autentikasi
                             if (rc522_auth(PICC_AUTHENT1A, block_to_read, found_key, uid) == Status_OK){
                                 if (rc522_read_block(block_to_read, block_data) == Status_OK){
                                     ESP_LOG_BUFFER_HEX(TAG, block_data, 16);
@@ -74,7 +75,6 @@ void mifare_read_task(void *pvParameters){
             case RFID_STATE_DONE:
             if (!rc522_request(atqa)){
                 ESP_LOGI(TAG, "Kartu dilepas, kembali idle.");
-                card_present = false;
                 state = RFID_STATE_IDLE;
             }
                 break;
