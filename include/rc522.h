@@ -99,3 +99,21 @@
 
 #define MFRC522_CS_GPIO      32 //gpio untuk esp32
 #define MFRC522_RST_GPIO     13
+
+esp_err_t rc522_init(spi_host_device_t spi_host);
+uint8_t rc522_read_reg(uint8_t reg);
+void rc522_write_reg(uint8_t reg, uint8_t val);
+
+void rc522_antenna_on(); //enable antena
+
+bool rc522_request(uint8_t *atqa); // REQA dan ATQA
+bool rc522_anticoll(uint8_t *uid);
+
+// otentikasi
+esp_err_t rc522_auth(uint8_t auth_mode, uint8_t block_addr, uint8_t *key, uint8_t *uid);
+esp_err_t rc522_read_block(uint8_t block_addr, uint8_t *block_data);
+
+// select
+esp_err_t rc522_select(uint8_t *uid);
+// brute force finder
+bool brute_force_key_finder(uint8_t *uid, uint8_t *found_key);

@@ -16,6 +16,20 @@ alur baca rfid:
         - jika dilepas, kembali ke rfid state idle
 */
 
+#include "stdio.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "rc522.h"
+#include "esp_log.h"
+#include "mifare_read_task.h"
 
+void app_main(void){
 
-void app_main() {}
+    if (rc522_init(VSPI_HOST) == ESP_OK){
+        ESP_LOGI("MAIN", "Starting RFID reader task...");
+        rc522_antenna_on();
+        vTaskDelay(pdMS_TO_TICKS(100));
+    }
+
+    xTaskCreate(mifare_read_task, "rfid read task", 4096, NULL, 5, NULL);
+}
