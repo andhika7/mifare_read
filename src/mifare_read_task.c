@@ -23,6 +23,7 @@ void mifare_read_task(void *pvParameters){
     uint8_t found_key[6];
     uint8_t block_data[16];
     const uint8_t block_to_read = 4; // contoh block
+    int no_card_counter = 0; // For stable release detection
 
     while (1){
         switch (state){
@@ -73,13 +74,19 @@ void mifare_read_task(void *pvParameters){
                 break;
             
             case RFID_STATE_DONE:
-            if (!rc522_request(atqa)){
-                ESP_LOGI(TAG, "Kartu dilepas, kembali idle.");
-                state = RFID_STATE_IDLE;
+            if (!rc522_request(atqa)){     
+                no_card_counter++;
+                if(no_card_counter >= 3){
+                    ESP_LOGI(TAG, "Kartu dilepas oey, kembali idle.");
+                    state = RFID_STATE_IDLE;
+                    no_card_counter = 0;
+                } 
+            } else {
+                no_card_counter = 0; // still detected, reset counter
             }
-                break;
-            }
-            vTaskDelay(pdMS_TO_TICKS(500));
+            vTaskDelay(pdMS_TO_TICKS(200));
+            break;
+        }
     }    
 }
 
