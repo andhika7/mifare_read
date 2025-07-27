@@ -75,7 +75,7 @@ void mifare_read_task(void *pvParameters){
             
             case RFID_STATE_DONE:
             if (!rc522_request(atqa)){     
-                no_card_counter++;
+                no_card_counter++; // menghindari glitch/deteksi hilang sebentar (bouncing detection).
                 if(no_card_counter >= 3){
                     ESP_LOGI(TAG, "Kartu dilepas oey, kembali idle.");
                     state = RFID_STATE_IDLE;
